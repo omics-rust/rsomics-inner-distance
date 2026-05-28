@@ -12,6 +12,11 @@ description = "mRNA-aware inner-distance distribution for paired-end RNA-seq —
 name = "rsomics-inner-distance"
 path = "src/main.rs"
 
+
+[lib]
+name = "rsomics_inner_distance"
+path = "src/lib.rs"
+doctest = false
 [dependencies]
 rsomics-common = { version = "0.6" }
 rsomics-bamio = { version = "0.1" }
