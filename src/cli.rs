@@ -61,16 +61,8 @@ pub struct Cli {
     pub common: CommonFlags,
 }
 
-impl Tool for Cli {
-    fn meta() -> ToolMeta {
-        META
-    }
-
-    fn common(&self) -> &CommonFlags {
-        &self.common
-    }
-
-    fn execute(self) -> Result<()> {
+impl Cli {
+    pub fn execute(&self) -> Result<InnerDistanceSummary> {
         if self.step <= 0 {
             return Err(RsomicsError::InvalidInput(
                 "step size must be a positive integer".to_string(),
@@ -93,19 +85,34 @@ impl Tool for Cli {
 
         write_output(&result, &self.out_prefix)?;
 
-        if self.common.json {
-            let summary = InnerDistanceSummary {
-                pair_num: result.pair_num,
-                output_prefix: self.out_prefix,
-            };
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&summary)
-                    .map_err(|e| RsomicsError::InvalidInput(e.to_string()))?
-            );
-        }
+        Ok(InnerDistanceSummary {
+            pair_num: result.pair_num,
+            output_prefix: self.out_prefix.clone(),
+        })
+    }
+}
 
+impl Tool for Cli {
+    fn meta() -> ToolMeta {
+        META
+    }
+
+    fn common(&self) -> &CommonFlags {
+        &self.common
+    }
+
+    fn execute(self) -> Result<()> {
+        Cli::execute(&self)?;
         Ok(())
+    }
+
+    // The default `run` discards the body's value, so `--json` would emit a
+    // second document with `result: null` after the manual print. Override to
+    // carry the populated InnerDistanceSummary into the single envelope while
+    // leaving the non-json path (output files + stderr progress) intact.
+    fn run(self) -> std::process::ExitCode {
+        let common = self.common().clone();
+        rsomics_common::run(&common, Self::meta(), move || Cli::execute(&self))
     }
 }
 
